@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FORGE</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; font-family: 'Courier New', monospace; color: #fff; min-height: 100vh; }
+
+  /* ── HUB ── */
+  #hub { display: flex; flex-direction: column; min-height: 100vh; padding: 0 0 60px; }
+  .hub-header { padding: 48px 24px 32px; max-width: 480px; margin: 0 auto; width: 100%; }
+  .hub-eyebrow { color: #333; font-size: 11px; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 10px; }
+  .hub-title { font-size: 38px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+  .hub-title span { display: block; }
+  .hub-week-info { color: #333; font-size: 11px; letter-spacing: 1px; margin-top: 8px; }
+  .hub-week-info span { color: #22c55e; }
+  .hub-divider { width: 32px; height: 2px; background: #222; margin: 20px 0; }
+  .hub-cards { max-width: 480px; margin: 0 auto; padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  .day-card {
+    border-radius: 8px; border: 1px solid #1e1e1e; background: #111;
+    padding: 22px 20px; cursor: pointer; display: flex; align-items: center;
+    gap: 18px; transition: all 0.2s ease; position: relative; overflow: hidden; border-left: 3px solid;
+  }
+  .day-card::before { content:''; position:absolute; top:0; left:0; right:0; bottom:0; opacity:0; transition:opacity 0.2s ease; }
+  .day-card:hover { transform: translateX(3px); }
+  .day-card:hover::before { opacity: 1; }
+  .day-card.push { border-left-color: #ef4444; }
+  .day-card.push::before { background: linear-gradient(90deg, #ef444408, transparent); }
+  .day-card.pull { border-left-color: #3b82f6; }
+  .day-card.pull::before { background: linear-gradient(90deg, #3b82f608, transparent); }
+  .day-card.legs { border-left-color: #22c55e; }
+  .day-card.legs::before { background: linear-gradient(90deg, #22c55e08, transparent); }
+  .day-card.completed { opacity: 0.45; cursor: default; pointer-events: none; }
+
+  .day-done-badge { font-size: 10px; letter-spacing: 1px; padding: 2px 8px; border-radius: 3px; margin-top: 6px; display: inline-block; }
+  .day-card.push .day-done-badge { background: #ef444415; color: #ef4444; }
+  .day-card.pull .day-done-badge { background: #3b82f615; color: #3b82f6; }
+  .day-card.legs .day-done-badge { background: #22c55e15; color: #22c55e; }
+
+  .day-icon { width:44px; height:44px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; position:relative; z-index:1; }
+  .day-card.push .day-icon { background: #ef444415; }
+  .day-card.pull .day-icon { background: #3b82f615; }
+  .day-card.legs .day-icon { background: #22c55e15; }
+  .day-info { flex:1; position:relative; z-index:1; }
+  .day-name { font-size:18px; font-weight:900; letter-spacing:-0.5px; }
+  .day-card.push .day-name { color: #ef4444; }
+  .day-card.pull .day-name { color: #3b82f6; }
+  .day-card.legs .day-name { color: #22c55e; }
+  .day-muscles { color:#444; font-size:11px; margin-top:3px; letter-spacing:0.5px; }
+  .day-count { color:#333; font-size:11px; letter-spacing:1px; margin-top:6px; }
+  .day-arrow { color:#333; font-size:16px; position:relative; z-index:1; transition:transform 0.2s ease; }
+  .day-card:hover .day-arrow { transform: translateX(4px); color:#555; }
+  .day-card.completed .day-arrow { display: none; }
+
+  .hub-progress-section { max-width:480px; margin:28px auto 0; padding:0 16px; }
+  .hub-progress-title { color:#333; font-size:10px; letter-spacing:3px; text-transform:uppercase; margin-bottom:12px; }
+  .hub-week-dots { display:flex; gap:10px; margin-bottom:16px; }
+  .week-dot { display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .week-dot-circle { width:36px; height:36px; border-radius:50%; border:2px solid #222; display:flex; align-items:center; justify-content:center; justify-items:center; font-size:10px; letter-spacing:0; text-align:center; line-height:1; transition:all 0.3s ease; }
+  .week-dot-circle.done-push { background:#ef444420; border-color:#ef4444; color:#ef4444; }
+  .week-dot-circle.done-pull { background:#3b82f620; border-color:#3b82f6; color:#3b82f6; }
+  .week-dot-circle.done-legs { background:#22c55e20; border-color:#22c55e; color:#22c55e; }
+  .week-dot-label { color:#333; font-size:9px; letter-spacing:1px; }
+
+  .hub-progress-bars { display:flex; flex-direction:column; gap:8px; }
+  .hpb-row { display:flex; align-items:center; gap:10px; }
+  .hpb-label { font-size:10px; letter-spacing:1px; width:40px; flex-shrink:0; }
+  .hpb-row.push .hpb-label { color: #ef4444; }
+  .hpb-row.pull .hpb-label { color: #3b82f6; }
+  .hpb-row.legs .hpb-label { color: #22c55e; }
+  .hpb-bar { flex:1; height:3px; background:#1a1a1a; border-radius:2px; overflow:hidden; }
+  .hpb-fill { height:100%; border-radius:2px; transition:width 0.4s ease; width:0%; }
+  .hpb-row.push .hpb-fill { background: #ef4444; }
+  .hpb-row.pull .hpb-fill { background: #3b82f6; }
+  .hpb-row.legs .hpb-fill { background: #22c55e; }
+  .hpb-count { color:#333; font-size:10px; width:28px; text-align:right; flex-shrink:0; }
+
+  .week-banner { max-width:480px; margin:20px auto 0; padding:0 16px; }
+  .week-banner-inner { background:#0a1a0a; border:1px solid #22c55e44; border-radius:8px; padding:20px; text-align:center; display:none; }
+  .week-banner-inner.show { display:block; }
+  .week-banner-emoji { font-size:28px; margin-bottom:10px; }
+  .week-banner-title { color:#22c55e; font-size:15px; font-weight:900; letter-spacing:2px; }
+  .week-banner-sub { color:#555; font-size:11px; margin-top:6px; }
+  .week-counter { color:#22c55e; font-size:11px; margin-top:10px; letter-spacing:1px; }
+  .btn-new-week { margin-top:14px; background:#0a1a0a; border:1px solid #22c55e; color:#22c55e; padding:9px 24px; border-radius:4px; cursor:pointer; font-size:11px; letter-spacing:2px; font-family:inherit; }
+  .btn-new-week:hover { background:#22c55e15; }
+
+  /* ── WORKOUT VIEW ── */
+  #workout-view { display:none; flex-direction:column; min-height:100vh; }
+  .wv-header { padding:28px 20px 20px; position:sticky; top:0; z-index:10; }
+  .wv-header-top { display:flex; justify-content:space-between; align-items:flex-start; max-width:480px; margin:0 auto; }
+  .wv-left { display:flex; flex-direction:column; }
+  .wv-label { font-size:11px; letter-spacing:4px; text-transform:uppercase; margin-bottom:4px; }
+  .wv-title { font-size:26px; font-weight:900; letter-spacing:-1px; line-height:1; }
+  .wv-subtitle { color:#555; font-size:12px; margin-top:4px; }
+  .wv-controls { display:flex; gap:8px; align-items:flex-start; }
+  .btn-back { background:none; border:1px solid #222; color:#555; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:11px; letter-spacing:1px; font-family:inherit; }
+  .btn-reset { background:none; border:1px solid #1a1a1a; color:#444; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:11px; letter-spacing:2px; font-family:inherit; }
+  .progress-row { display:flex; justify-content:space-between; margin:16px auto 6px; max-width:480px; }
+  .progress-label { color:#666; font-size:11px; letter-spacing:2px; }
+  .progress-bar { height:4px; background:#1a1a1a; border-radius:2px; overflow:hidden; max-width:480px; margin:0 auto; }
+  .progress-fill { height:100%; border-radius:2px; transition:width 0.4s ease; }
+
+  /* confirm modal */
+  .modal-overlay { position:fixed; inset:0; background:#000000cc; z-index:100; display:none; align-items:center; justify-content:center; padding:20px; }
+  .modal-overlay.show { display:flex; }
+  .modal-box { background:#111; border:1px solid #2a2a2a; border-radius:10px; padding:28px 24px; max-width:300px; width:100%; text-align:center; }
+  .modal-icon { font-size:22px; margin-bottom:12px; }
+  .modal-title { font-size:13px; font-weight:900; letter-spacing:2px; margin-bottom:6px; }
+  .modal-sub { color:#555; font-size:11px; line-height:1.6; }
+  .modal-actions { display:flex; gap:8px; margin-top:20px; }
+  .modal-cancel { flex:1; background:none; border:1px solid #2a2a2a; color:#555; padding:10px; border-radius:5px; cursor:pointer; font-size:11px; letter-spacing:1px; font-family:inherit; }
+  .modal-confirm { flex:1; padding:10px; border-radius:5px; cursor:pointer; font-size:11px; letter-spacing:1px; font-weight:700; font-family:inherit; border:1px solid; }
+  .theme-push .modal-title { color:#ef4444; }
+  .theme-push .modal-confirm { background:#ef444415; border-color:#ef4444; color:#ef4444; }
+  .theme-pull .modal-title { color:#3b82f6; }
+  .theme-pull .modal-confirm { background:#3b82f615; border-color:#3b82f6; color:#3b82f6; }
+  .theme-legs .modal-title { color:#22c55e; }
+  .theme-legs .modal-confirm { background:#22c55e15; border-color:#22c55e; color:#22c55e; }
+
+  /* validate button */
+  .validate-bar { max-width:480px; margin:0 auto; padding:16px 16px 0; }
+  .btn-validate {
+    width:100%; padding:13px; border-radius:6px; font-family:inherit;
+    font-size:12px; letter-spacing:2px; font-weight:700; cursor:pointer;
+    border:1px solid; transition:all 0.2s ease;
+  }
+  .btn-validate:hover { opacity:0.85; }
+  .theme-push .btn-validate { background:#ef444415; border-color:#ef4444; color:#ef4444; }
+  .theme-pull .btn-validate { background:#3b82f615; border-color:#3b82f6; color:#3b82f6; }
+  .theme-legs .btn-validate { background:#22c55e15; border-color:#22c55e; color:#22c55e; }
+
+  .exercises { max-width:480px; margin:0 auto; padding:14px 16px 0; }
+  .card { background:#111; border:1px solid #1e1e1e; border-radius:8px; margin-bottom:10px; padding:16px; transition:all 0.3s ease; border-left:3px solid #888; }
+  .card.done { background:#0f1f0f; border-color:#22c55e33; border-left-color:#22c55e; opacity:0.7; }
+  .card-inner { display:flex; align-items:flex-start; gap:14px; }
+  .checkbox { width:28px; height:28px; min-width:28px; border-radius:6px; border:2px solid #333; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:2px; transition:all 0.2s ease; flex-shrink:0; }
+  .checkbox.checked { background:#22c55e; border-color:#22c55e; }
+  .checkmark { display:none; color:#000; font-size:14px; font-weight:900; }
+  .checkbox.checked .checkmark { display:block; }
+  .card-content { flex:1; }
+  .ex-name { font-size:15px; font-weight:700; letter-spacing:0.3px; }
+  .done .ex-name { color:#555; text-decoration:line-through; }
+  .ex-meta { display:flex; gap:8px; margin-top:4px; align-items:center; flex-wrap:wrap; }
+  .muscle-tag { font-size:10px; padding:2px 8px; border-radius:3px; letter-spacing:1px; text-transform:uppercase; font-weight:700; }
+  .ex-sets { color:#555; font-size:12px; }
+  .ex-rest { color:#444; font-size:11px; }
+  .ex-note { color:#666; font-size:11px; margin-top:5px; }
+  .card-bottom { display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .weight-input { width:70px; background:#0a0a0a; border:1px solid #2a2a2a; border-radius:4px; color:#fff; padding:5px 10px; font-size:13px; outline:none; font-family:inherit; }
+  .kg-label { color:#444; font-size:11px; letter-spacing:1px; flex:1; }
+  .btn-rest-ex { padding:5px 12px; border-radius:4px; cursor:pointer; font-size:11px; letter-spacing:1px; font-family:inherit; }
+  .btn-stop { background:#1a0a0a; border:1px solid #555; color:#555; padding:5px 12px; border-radius:4px; cursor:pointer; font-size:11px; letter-spacing:1px; font-family:inherit; }
+  .timer-box { margin-top:10px; background:#0a0a0a; border-radius:6px; padding:10px 14px; display:none; }
+  .timer-box.active { display:block; }
+  .timer-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .timer-label { font-size:11px; letter-spacing:2px; }
+  .timer-count { font-size:18px; font-weight:900; }
+  .timer-bar { height:3px; background:#1a1a1a; border-radius:2px; overflow:hidden; }
+  .timer-fill { height:100%; border-radius:2px; transition:width 1s linear; width:0%; }
+
+  /* themes */
+  .theme-push .wv-header { background:linear-gradient(135deg,#1a0000 0%,#0a0a0a 60%); border-bottom:2px solid #ef4444; }
+  .theme-push .wv-label { color:#ef4444; }
+  .theme-push .progress-fill { background:#ef4444; }
+  .theme-push #prog-count { color:#ef4444; }
+  .theme-push .timer-box { border:1px solid #3a1a1a; }
+  .theme-push .timer-label { color:#ef4444; }
+  .theme-push .timer-fill { background:#f97316; }
+  .theme-push .btn-rest-ex { background:#1a0a00; border:1px solid #ef4444; color:#ef4444; }
+
+  .theme-pull .wv-header { background:linear-gradient(135deg,#00001a 0%,#0a0a0a 60%); border-bottom:2px solid #3b82f6; }
+  .theme-pull .wv-label { color:#3b82f6; }
+  .theme-pull .progress-fill { background:#3b82f6; }
+  .theme-pull #prog-count { color:#3b82f6; }
+  .theme-pull .timer-box { border:1px solid #1e3a5f; }
+  .theme-pull .timer-label { color:#3b82f6; }
+  .theme-pull .timer-fill { background:#3b82f6; }
+  .theme-pull .btn-rest-ex { background:#0a1628; border:1px solid #3b82f6; color:#3b82f6; }
+
+  .theme-legs .wv-header { background:linear-gradient(135deg,#0a1a00 0%,#0a0a0a 60%); border-bottom:2px solid #22c55e; }
+  .theme-legs .wv-label { color:#22c55e; }
+  .theme-legs .progress-fill { background:#22c55e; }
+  .theme-legs #prog-count { color:#22c55e; }
+  .theme-legs .timer-box { border:1px solid #1a3a1a; }
+  .theme-legs .timer-label { color:#22c55e; }
+  .theme-legs .timer-fill { background:#22c55e; }
+  .theme-legs .btn-rest-ex { background:#0a1a00; border:1px solid #22c55e; color:#22c55e; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HUB ═══════════ -->
+<div id="hub">
+  <div class="hub-header">
+    <div class="hub-eyebrow">Programme</div>
+    <div class="hub-title">
+      <span style="color:#fff">FORGE</span>
+      <span style="color:#222">TRAINING</span>
+    </div>
+    <div class="hub-week-info" id="hub-week-info"></div>
+    <div class="hub-divider"></div>
+  </div>
+
+  <div class="hub-cards">
+    <div class="day-card push" id="card-push" onclick="openWorkout('push')">
+      <div class="day-icon">🔴</div>
+      <div class="day-info">
+        <div class="day-name">PUSH DAY</div>
+        <div class="day-muscles">Pectoraux · Épaules · Triceps · Abdos</div>
+        <div id="hub-status-push" class="day-count">8 exercices</div>
+      </div>
+      <div class="day-arrow">›</div>
+    </div>
+    <div class="day-card pull" id="card-pull" onclick="openWorkout('pull')">
+      <div class="day-icon">🔵</div>
+      <div class="day-info">
+        <div class="day-name">PULL DAY</div>
+        <div class="day-muscles">Dos · Biceps · Abdos</div>
+        <div id="hub-status-pull" class="day-count">6 exercices</div>
+      </div>
+      <div class="day-arrow">›</div>
+    </div>
+    <div class="day-card legs" id="card-legs" onclick="openWorkout('legs')">
+      <div class="day-icon">🟢</div>
+      <div class="day-info">
+        <div class="day-name">LEGS DAY</div>
+        <div class="day-muscles">Cuisses · Fessiers · Mollets · Abdos</div>
+        <div id="hub-status-legs" class="day-count">7 exercices</div>
+      </div>
+      <div class="day-arrow">›</div>
+    </div>
+  </div>
+
+  <div class="hub-progress-section">
+    <div class="hub-progress-title">Progression de la semaine</div>
+    <div class="hub-week-dots">
+      <div class="week-dot">
+        <div class="week-dot-circle" id="dot-push">P</div>
+        <div class="week-dot-label">PUSH</div>
+      </div>
+      <div class="week-dot">
+        <div class="week-dot-circle" id="dot-pull">PL</div>
+        <div class="week-dot-label">PULL</div>
+      </div>
+      <div class="week-dot">
+        <div class="week-dot-circle" id="dot-legs">L</div>
+        <div class="week-dot-label">LEGS</div>
+      </div>
+    </div>
+    <div class="hub-progress-bars">
+      <div class="hpb-row push">
+        <span class="hpb-label">PUSH</span>
+        <div class="hpb-bar"><div class="hpb-fill" id="hub-bar-push"></div></div>
+        <span class="hpb-count" id="hub-num-push">0/8</span>
+      </div>
+      <div class="hpb-row pull">
+        <span class="hpb-label">PULL</span>
+        <div class="hpb-bar"><div class="hpb-fill" id="hub-bar-pull"></div></div>
+        <span class="hpb-count" id="hub-num-pull">0/6</span>
+      </div>
+      <div class="hpb-row legs">
+        <span class="hpb-label">LEGS</span>
+        <div class="hpb-bar"><div class="hpb-fill" id="hub-bar-legs"></div></div>
+        <span class="hpb-count" id="hub-num-legs">0/7</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="week-banner">
+    <div class="week-banner-inner" id="week-banner">
+      <div class="week-banner-emoji">🏆</div>
+      <div class="week-banner-title">SEMAINE TERMINÉE !</div>
+      <div class="week-banner-sub">Les 3 séances sont validées. Récupère bien.</div>
+      <div class="week-counter" id="week-counter"></div>
+      <button class="btn-new-week" onclick="startNewWeek()">NOUVELLE SEMAINE →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ WORKOUT VIEW ═══════════ -->
+<div id="workout-view">
+  <div class="wv-header">
+    <div class="wv-header-top">
+      <div class="wv-left">
+        <div class="wv-label">Programme</div>
+        <div class="wv-title" id="wv-title">-</div>
+        <div class="wv-subtitle" id="wv-subtitle">-</div>
+      </div>
+      <div class="wv-controls">
+        <button class="btn-back" onclick="goBack()">← HUB</button>
+        <button class="btn-reset" onclick="resetCurrent()">RESET</button>
+      </div>
+    </div>
+    <div class="progress-row" style="margin-top:16px;margin-bottom:6px;">
+      <span class="progress-label">EXERCICES COCHÉS</span>
+      <span id="prog-count">0/0</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Bouton valider toujours visible -->
+  <div class="validate-bar">
+    <button class="btn-validate" onclick="validateDay()">✓ VALIDER LA SÉANCE</button>
+  </div>
+
+  <div class="exercises" id="exercises"></div>
+
+  <!-- Confirm modal -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal-box">
+      <div class="modal-icon">⚠️</div>
+      <div class="modal-title">VALIDER LA SÉANCE ?</div>
+      <div class="modal-sub">La séance sera marquée comme terminée pour cette semaine. Tu pourras toujours la rouvrir.</div>
+      <div class="modal-actions">
+        <button class="modal-cancel" onclick="closeModal()">ANNULER</button>
+        <button class="modal-confirm" onclick="confirmValidate()">VALIDER</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────
+const WORKOUTS = {
+  push: {
+    title:'PUSH DAY', subtitle:'Pectoraux · Épaules · Triceps · Abdos',
+    theme:'theme-push', color:'#ef4444', timerBg:'#f97316',
+    exercises:[
+      {id:1,name:"Développé couché barre",        muscle:"Pectoraux",color:"#ef4444",sets:4,reps:"6-10", note:"Bande poignet gauche ⚠️",rest:90},
+      {id:2,name:"Développé incliné haltères",    muscle:"Pectoraux",color:"#ef4444",sets:3,reps:"6-10", note:"Prise neutre",rest:90},
+      {id:3,name:"Écarté couché haltères",        muscle:"Pectoraux",color:"#ef4444",sets:3,reps:"10-12",note:"Prise neutre, étirement max",rest:60},
+      {id:4,name:"Développé militaire haltères",  muscle:"Épaules",  color:"#f97316",sets:3,reps:"6-10", note:"Bande poignet gauche ⚠️",rest:90},
+      {id:5,name:"Élévations latérales haltères", muscle:"Épaules",  color:"#f97316",sets:3,reps:"12-15",note:"Léger et contrôlé",rest:60},
+      {id:6,name:"Triceps poulie haute corde",    muscle:"Triceps",  color:"#eab308",sets:3,reps:"10-12",note:"Coudes collés au corps",rest:60},
+      {id:7,name:"Triceps poulie basse corde",    muscle:"Triceps",  color:"#eab308",sets:3,reps:"10-12",note:"Chef long — bras tendus vers le haut",rest:60},
+      {id:8,name:"Bicycle crunch",                muscle:"Abdos",    color:"#22c55e",sets:3,reps:"20",   note:"Lent et contrôlé, coude vers genou opposé",rest:45},
+    ]
+  },
+  pull: {
+    title:'PULL DAY', subtitle:'Dos · Biceps · Abdos',
+    theme:'theme-pull', color:'#3b82f6', timerBg:'#3b82f6',
+    exercises:[
+      {id:1,name:"Tirage poulie haute barre large",muscle:"Dos",   color:"#3b82f6",sets:4,reps:"6-10", note:"Prise pronation, coudes vers le bas et en arrière",rest:90},
+      {id:2,name:"Rowing barre",                   muscle:"Dos",   color:"#3b82f6",sets:4,reps:"6-10", note:"Dos droit, tirage vers le nombril",rest:90},
+      {id:3,name:"Rowing haltère 1 bras",          muscle:"Dos",   color:"#3b82f6",sets:3,reps:"8-10", note:"Prise neutre ✅ poignet OK",rest:60},
+      {id:4,name:"Curl barre EZ",                  muscle:"Biceps",color:"#8b5cf6",sets:3,reps:"8-10", note:"Moins de contrainte poignet que barre droite",rest:60},
+      {id:5,name:"Curl haltères",                  muscle:"Biceps",color:"#8b5cf6",sets:3,reps:"10-12",note:"Supination en montant",rest:60},
+      {id:6,name:"Bicycle crunch",                 muscle:"Abdos", color:"#22c55e",sets:3,reps:"20",   note:"Lent et contrôlé, coude vers genou opposé",rest:45},
+    ]
+  },
+  legs: {
+    title:'LEGS DAY', subtitle:'Cuisses · Fessiers · Mollets · Abdos',
+    theme:'theme-legs', color:'#22c55e', timerBg:'#22c55e',
+    exercises:[
+      {id:1,name:"Squat barre",       muscle:"Cuisses",   color:"#22c55e",sets:4,reps:"6-10", note:"Bande poignet gauche ⚠️ — dos droit, descente contrôlée",rest:90},
+      {id:2,name:"Presse à cuisses",  muscle:"Cuisses",   color:"#22c55e",sets:3,reps:"8-10", note:"Pieds écartés largeur épaules, descente lente",rest:90},
+      {id:3,name:"Fentes haltères",   muscle:"Cuisses",   color:"#22c55e",sets:3,reps:"8-10", note:"Prise neutre ✅ — genou avant ne dépasse pas le pied",rest:60},
+      {id:4,name:"Leg curl couché",   muscle:"Ischio",    color:"#84cc16",sets:3,reps:"10-12",note:"Contraction maximale en haut, descente lente",rest:60},
+      {id:5,name:"Extensions jambes", muscle:"Quadriceps",color:"#eab308",sets:3,reps:"10-12",note:"Descente lente et contrôlée",rest:60},
+      {id:6,name:"Mollets debout",    muscle:"Mollets",   color:"#f97316",sets:4,reps:"15-20",note:"Amplitude complète, pause en bas",rest:45},
+      {id:7,name:"Bicycle crunch",    muscle:"Abdos",     color:"#3b82f6",sets:3,reps:"20",   note:"Lent et contrôlé, coude vers genou opposé",rest:45},
+    ]
+  }
+};
+
+// ── LOCALSTORAGE ──────────────────────────────────────────────
+const LS = {
+  weights:   'wh_weights',
+  checked:   'wh_checked',
+  validated: 'wh_validated', // { push:bool, pull:bool, legs:bool } — indépendant des cases
+  weekKey:   'wh_weekKey',
+  weekCount: 'wh_weekCount',
+};
+
+function lsGet(key, fallback) {
+  try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback; }
+  catch { return fallback; }
+}
+function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
+
+function getISOWeek() {
+  const d = new Date();
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  const start = new Date(jan4);
+  start.setDate(jan4.getDate() - (jan4.getDay()||7) + 1);
+  const wn = Math.ceil(((d - start) / 86400000 + 1) / 7);
+  return `${d.getFullYear()}-W${String(wn).padStart(2,'0')}`;
+}
+
+// ── STATE ─────────────────────────────────────────────────────
+let weights   = lsGet(LS.weights,   {push:{},pull:{},legs:{}});
+let checked   = lsGet(LS.checked,   {push:{},pull:{},legs:{}});
+let validated = lsGet(LS.validated, {push:false,pull:false,legs:false});
+let weekCount = lsGet(LS.weekCount, 0);
+
+// Auto-rollover
+(function() {
+  const stored  = lsGet(LS.weekKey, null);
+  const current = getISOWeek();
+  if (stored && stored !== current) {
+    if (validated.push && validated.pull && validated.legs) weekCount++;
+    checked   = {push:{},pull:{},legs:{}};
+    validated = {push:false,pull:false,legs:false};
+    lsSet(LS.checked,   checked);
+    lsSet(LS.validated, validated);
+    lsSet(LS.weekCount, weekCount);
+  }
+  lsSet(LS.weekKey, current);
+})();
+
+const intervals = {};
+let currentDay  = null;
+
+// ── HUB ───────────────────────────────────────────────────────
+function renderHub() {
+  const weekDone = validated.push && validated.pull && validated.legs;
+
+  ['push','pull','legs'].forEach(day => {
+    const total   = WORKOUTS[day].exercises.length;
+    const done    = Object.values(checked[day]||{}).filter(Boolean).length;
+    const pct     = Math.round(done / total * 100);
+    const val     = validated[day];
+
+    document.getElementById(`hub-bar-${day}`).style.width = pct + '%';
+    document.getElementById(`hub-num-${day}`).textContent = `${done}/${total}`;
+
+    const card   = document.getElementById(`card-${day}`);
+    const status = document.getElementById(`hub-status-${day}`);
+    const dot    = document.getElementById(`dot-${day}`);
+
+    if (val) {
+      card.classList.add('completed');
+      status.innerHTML = `<span class="day-done-badge">✓ VALIDÉ</span>`;
+      dot.className = `week-dot-circle done-${day}`;
+      dot.textContent = '✓';
+    } else {
+      card.classList.remove('completed');
+      status.textContent = `${total} exercices`;
+      dot.className = 'week-dot-circle';
+      dot.textContent = day === 'push' ? 'P' : day === 'pull' ? 'PL' : 'L';
+    }
+  });
+
+  // week banner
+  document.getElementById('week-banner').className =
+    weekDone ? 'week-banner-inner show' : 'week-banner-inner';
+  if (weekDone) {
+    document.getElementById('week-counter').textContent =
+      weekCount > 0
+        ? `${weekCount} semaine${weekCount>1?'s':''} complète${weekCount>1?'s':''}`
+        : 'Première semaine complète !';
+  }
+
+  // header counter
+  const wInfo = document.getElementById('hub-week-info');
+  wInfo.innerHTML = weekCount > 0
+    ? `Semaines complètes\u00a0: <span>${weekCount}</span>`
+    : '';
+}
+
+function startNewWeek() {
+  weekCount++;
+  lsSet(LS.weekCount, weekCount);
+  checked   = {push:{},pull:{},legs:{}};
+  validated = {push:false,pull:false,legs:false};
+  lsSet(LS.checked,   checked);
+  lsSet(LS.validated, validated);
+  renderHub();
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────
+function openWorkout(day) {
+  currentDay = day;
+  const w  = WORKOUTS[day];
+  const wv = document.getElementById('workout-view');
+  wv.className = w.theme;
+  wv.style.display = 'flex';
+  document.getElementById('hub').style.display = 'none';
+  document.getElementById('wv-title').textContent    = w.title;
+  document.getElementById('wv-subtitle').textContent = w.subtitle;
+  render();
+  window.scrollTo(0,0);
+}
+
+function goBack() {
+  document.getElementById('workout-view').style.display = 'none';
+  document.getElementById('hub').style.display = 'flex';
+  renderHub();
+  currentDay = null;
+  window.scrollTo(0,0);
+}
+
+// ── VALIDATE DAY ──────────────────────────────────────────────
+function validateDay() {
+  document.getElementById('confirm-modal').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('confirm-modal').classList.remove('show');
+}
+function confirmValidate() {
+  closeModal();
+  validated[currentDay] = true;
+  lsSet(LS.validated, validated);
+  goBack();
+}
+
+// ── RENDER WORKOUT ────────────────────────────────────────────
+function render() {
+  if (!currentDay) return;
+  const day = currentDay;
+  const w   = WORKOUTS[day];
+  const ch  = checked[day] || {};
+  const wts = weights[day] || {};
+
+  document.getElementById('exercises').innerHTML = w.exercises.map(ex => {
+    const done = !!ch[ex.id];
+    return `
+    <div class="card ${done?'done':''}" style="border-left-color:${done?'#22c55e':ex.color}">
+      <div class="card-inner">
+        <div class="checkbox ${done?'checked':''}" onclick="toggle(${ex.id})"><span class="checkmark">✓</span></div>
+        <div class="card-content">
+          <div class="ex-name">${ex.name}</div>
+          <div class="ex-meta">
+            <span class="muscle-tag" style="background:${ex.color}22;color:${ex.color}">${ex.muscle}</span>
+            <span class="ex-sets">${ex.sets} × ${ex.reps}</span>
+            <span class="ex-rest">⏱ ${ex.rest}s repos</span>
+          </div>
+          ${ex.note?`<div class="ex-note">${ex.note}</div>`:''}
+          <div class="card-bottom">
+            <input class="weight-input" type="number" placeholder="kg"
+              value="${wts[ex.id]||''}"
+              onchange="saveWeight(${ex.id},this.value)">
+            <span class="kg-label">KG</span>
+            <button class="btn-rest-ex" id="btn-${ex.id}" onclick="startTimer(${ex.id},${ex.rest})">▶ REPOS</button>
+          </div>
+          <div class="timer-box" id="timer-${ex.id}">
+            <div class="timer-row">
+              <span class="timer-label">REPOS</span>
+              <span class="timer-count" id="tc-${ex.id}">-</span>
+            </div>
+            <div class="timer-bar"><div class="timer-fill" id="tf-${ex.id}"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateProgress();
+}
+
+function toggle(id) {
+  if (!checked[currentDay]) checked[currentDay] = {};
+  checked[currentDay][id] = !checked[currentDay][id];
+  lsSet(LS.checked, checked);
+  render();
+}
+
+function saveWeight(id, v) {
+  if (!weights[currentDay]) weights[currentDay] = {};
+  weights[currentDay][id] = v;
+  lsSet(LS.weights, weights);
+}
+
+function updateProgress() {
+  const day   = currentDay;
+  const w     = WORKOUTS[day];
+  const total = w.exercises.length;
+  const done  = Object.values(checked[day]||{}).filter(Boolean).length;
+  const pct   = Math.round(done / total * 100);
+  document.getElementById('prog-count').textContent     = `${done}/${total}`;
+  document.getElementById('prog-count').style.color     = w.color;
+  document.getElementById('prog-fill').style.width      = pct + '%';
+  document.getElementById('prog-fill').style.background = w.color;
+}
+
+// ── TIMER ─────────────────────────────────────────────────────
+function startTimer(id, seconds) {
+  const day = currentDay;
+  const key = `${day}-${id}`;
+  if (intervals[key]) clearInterval(intervals[key]);
+  document.getElementById(`timer-${id}`).classList.add('active');
+  const btn = document.getElementById(`btn-${id}`);
+  btn.textContent = '✕ STOP'; btn.className = 'btn-stop';
+  btn.onclick = () => stopTimer(id, seconds);
+  let left = seconds;
+  const tc = document.getElementById(`tc-${id}`);
+  const tf = document.getElementById(`tf-${id}`);
+  tc.textContent = left+'s'; tc.style.color = '#fff';
+  tf.style.width = '0%'; tf.style.background = WORKOUTS[day].timerBg;
+  intervals[key] = setInterval(() => {
+    left--;
+    tf.style.width = ((seconds-left)/seconds*100)+'%';
+    tc.textContent = left+'s';
+    if (left<=10) { tc.style.color='#ef4444'; tf.style.background='#ef4444'; }
+    if (left<=0) stopTimer(id, seconds);
+  }, 1000);
+}
+
+function stopTimer(id, seconds) {
+  const day = currentDay;
+  const key = `${day}-${id}`;
+  clearInterval(intervals[key]);
+  const box = document.getElementById(`timer-${id}`);
+  const btn = document.getElementById(`btn-${id}`);
+  if (box) box.classList.remove('active');
+  if (btn) {
+    btn.textContent = '▶ REPOS'; btn.className = 'btn-rest-ex';
+    btn.onclick = () => startTimer(id, seconds||WORKOUTS[day].exercises.find(e=>e.id===id).rest);
+  }
+}
+
+function resetCurrent() {
+  checked[currentDay] = {};
+  lsSet(LS.checked, checked);
+  render();
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+renderHub();
+</script>
+</body>
+</html>
